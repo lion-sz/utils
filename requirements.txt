@@ -1,0 +1,3 @@
+polars
+python-box[all]
+tqdm
