@@ -20,6 +20,7 @@ author = "Lion Szlagowski"
 extensions = [
     "sphinx.ext.autodoc",
     "sphinx.ext.napoleon",
+    "sphinxcontrib.typer",
 ]
 
 templates_path = ["_templates"]

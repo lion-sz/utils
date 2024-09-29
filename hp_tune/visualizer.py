@@ -5,12 +5,15 @@ import dash_bootstrap_components as dbc
 import plotly.express as px
 
 
+from app import app, state
+
+
 def build_app(config):
     dat = pl.read_parquet("trace.parquet")
 
     app = Dash(external_stylesheets=[dbc.themes.BOOTSTRAP])
 
-    dimensions = list(config.tune.space.keys())
+    dimensions = list(config.space.keys())
     rs = dat.select(col("r").unique().sort())["r"].to_list()
 
     title = dbc.Row(dbc.Col(html.H1("Hyperparameter Tuning")))
@@ -103,3 +106,11 @@ def build_app(config):
         return fig
 
     return app
+
+
+@app.command("visualize")
+def visualize():
+    config = state["config"]
+    dash_app = build_app(config.tune)
+    dash_app.run(debug=True, host="0.0.0.0")
+    return

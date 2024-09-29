@@ -21,14 +21,15 @@ def _merge_boxes(left: Box, right: Box) -> Box:
 
 
 class ConfigReader:
-    name: str
+    name: str | None
     env_vars: dict[str, str]
 
-    def __init__(self, name: str):
+    def __init__(self, name: str | None):
         """Config Reader Class
 
         Each reader is created with a name that determines how it loads environment
         variables.
+        If no name is provided then no environment variables are loaded.
         """
         self.name = name
 
@@ -76,7 +77,8 @@ class ConfigReader:
                 raise ValueError(f"Subconfig '{subname}' already exists in config!")
             config[subname] = Box.from_yaml(filename=file)
         # Process the config
-        self._parse_environ_overwrites(config)
+        if self.name is not None:
+            self._parse_environ_overwrites(config)
         self._parse_paths(config)
         self._convert_range(config)
         return config
