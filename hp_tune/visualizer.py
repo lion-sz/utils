@@ -109,8 +109,8 @@ def build_app(config):
 
 
 @app.command("visualize")
-def visualize():
+def visualize(name: str):
     config = state["config"]
-    dash_app = build_app(config.tune)
+    dash_app = build_app(config[name])
     dash_app.run(debug=True, host="0.0.0.0")
     return

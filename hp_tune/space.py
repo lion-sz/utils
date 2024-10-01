@@ -46,6 +46,21 @@ class Space:
             res += points[:, ind] > self.cont_upper[i]
         return res == 0
 
+    def clip_points(self, points: np.ndarray):
+        if not points.ndim == 2:
+            raise NotImplementedError("Check contains points called with not 2d array.")
+        res = np.zeros(shape=points.shape[0], dtype=np.int64)
+        for i, ind in enumerate(self.cont_ind):
+            temp = points[:, ind] < self.cont_lower[i]
+            points[temp, ind] = self.cont_lower[i]
+            res += temp
+            temp = points[:, ind] > self.cont_upper[i]
+            points[temp, ind] = self.cont_upper[i]
+            res += temp
+        print("Share, num of points inside the space: ", np.mean(res == 0), np.sum(res == 0))
+        return points
+
+
 
 class Point:
     _space: Space

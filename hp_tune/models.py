@@ -205,8 +205,9 @@ def sample_points_bohb(n, space: Space, losses, q, rho):
     i = 0
     while i < 10:
         temp = kde_l.sample((n - n_rand) * 5000)
-        valid = space.check_contains_points(temp)
-        temp = temp[valid, :]
+        # valid = space.check_contains_points(temp)
+        # temp = temp[valid, :]
+        temp = space.clip_points(temp)
         candidates.append(temp)
         i += 1
         if sum(map(len, candidates)) > ((n - n_rand) * 10):
