@@ -1,5 +1,6 @@
 import pathlib
 import logging
+import datetime
 from os import environ
 
 from box import Box
@@ -33,7 +34,7 @@ class ConfigReader:
         """
         self.name = name
 
-    def load(self, base_path: str | pathlib.Path) -> Box:
+    def load(self, base_path: str | pathlib.Path, overwrites: dict[str, str]) -> Box:
         """Load a config structure
 
         It performs three processing steps:
@@ -59,6 +60,7 @@ class ConfigReader:
 
         Args:
             base_path: The path where the base config is stored.
+            overwrites: A dict of keys to overwrite.
         """
 
         if isinstance(base_path, str):
@@ -68,7 +70,7 @@ class ConfigReader:
         if not (base_path / "config.yaml").exists():
             raise ValueError(f"Path {base_path} does not contain config.yaml")
         # Load all config files in this directory.
-        config = Box.from_yaml(filename=base_path / "config.yaml")
+        config = Box.from_yaml(filename=base_path / "config.yaml", box_dots=True)
         for file in base_path.glob("*.yaml"):
             if file.name == "config.yaml":
                 continue
@@ -76,11 +78,15 @@ class ConfigReader:
             if subname in config:
                 raise ValueError(f"Subconfig '{subname}' already exists in config!")
             config[subname] = Box.from_yaml(filename=file)
+        # Apply overwrites.
+        for k, v in overwrites.items():
+            config[k] = v
         # Process the config
         if self.name is not None:
             self._parse_environ_overwrites(config)
         self._parse_paths(config)
         self._convert_range(config)
+        self._convert_dates(config)
         return config
 
     def _parse_environ_overwrites(self, config: Box):
@@ -132,4 +138,15 @@ class ConfigReader:
                     config[k] = list(range(v.start, v.end + 1))
                 else:
                     self._convert_range(v)
+        return
+
+    def _convert_dates(self, config: Box):
+        for k, v in config.items():
+            if isinstance(v, Box):
+                self._convert_dates(v)
+            elif k.endswith("_date") and isinstance(v, str):
+                try:
+                    config[k] = datetime.datetime.strptime(v, "%Y-%m-%d").date()
+                except ValueError:
+                    logger.warning(f"Failed to parse date {v} for key {k}")
         return

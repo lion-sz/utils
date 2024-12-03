@@ -6,6 +6,7 @@ from datetime import datetime, timedelta
 
 import polars as pl
 
+
 def cached(name: str, retention_hours: int = 0, use_args: bool = False) -> Callable:
     """Cache a function result.
 
@@ -33,37 +34,38 @@ def _cached(func, name: str, retention_hours: int, use_args: bool):
             return func(*args, **kwargs)
         # Check the arguments
         if use_args:
-            arg_s = [str(a) for a  in args]
+            arg_s = [str(a) for a in args]
             for k, v in kwargs.items():
                 arg_s.append(k)
                 arg_s.append(str(v))
             suffix = "_" + hashlib.md5("---".join(arg_s).encode()).hexdigest()
         else:
             suffix = ""
-        # Check if a cached file exists.
+
         cache_path = config.cache_path
         if not cache_path.exists():
             cache_path.mkdir()
-        cache_file = None
-        candidates = sorted(cache_path.glob(f"{name}{suffix}_*.parquet"), reverse=True)
-        # Go through the candidates and filter out too old ones.
+
+        # Remove outdated cache files
+        candidates = sorted(cache_path.glob(f"{name}_*.parquet"), reverse=True)
         retention = timedelta(hours=retention_hours)
         for cand in candidates:
             cand_ts = int(cand.name.split("_")[-1].replace(".parquet", ""))
             cand_ts = datetime.fromtimestamp(cand_ts)
             if (datetime.now() - cand_ts) > retention:
                 cand.unlink()
-            # The first is the cache file.
-            elif cache_file is None:
-                cache_file = cand
-        if cache_file is None:
+
+        # Check if a cached file exists.
+        candidates = sorted(cache_path.glob(f"{name}{suffix}_*.parquet"), reverse=True)
+        if len(candidates) > 0:
+            cache_file = candidates[0]
+            return pl.read_parquet(cache_file)
+        else:
             ts = int(datetime.now().timestamp())
             cache_file = cache_path / f"{name}{suffix}_{ts}.parquet"
             res = func(*args, **kwargs)
             res.write_parquet(cache_file)
             return res
-        else:
-            return pl.read_parquet(cache_file)
 
     if inner.__doc__ is not None:
         parts = inner.__doc__.split("\n", maxsplit=1)
