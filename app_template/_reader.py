@@ -80,13 +80,25 @@ class ConfigReader:
             config[subname] = Box.from_yaml(filename=file)
         # Apply overwrites.
         for k, v in overwrites.items():
+            if v in ["True", "true"]:
+                v = True
+            elif v in ["False", "false"]:
+                v = False
+            elif v.isdigit():
+                v = int(v)
+            elif v.replace(".", "", 1).isdigit():
+                v = float(v)
+            elif "-" in v:
+                try:
+                    v = datetime.datetime.strptime(v, "%Y-%m-%d").date()
+                except ValueError:
+                    pass
             config[k] = v
         # Process the config
         if self.name is not None:
             self._parse_environ_overwrites(config)
         self._parse_paths(config)
         self._convert_range(config)
-        self._convert_dates(config)
         return config
 
     def _parse_environ_overwrites(self, config: Box):
@@ -138,15 +150,4 @@ class ConfigReader:
                     config[k] = list(range(v.start, v.end + 1))
                 else:
                     self._convert_range(v)
-        return
-
-    def _convert_dates(self, config: Box):
-        for k, v in config.items():
-            if isinstance(v, Box):
-                self._convert_dates(v)
-            elif k.endswith("_date") and isinstance(v, str):
-                try:
-                    config[k] = datetime.datetime.strptime(v, "%Y-%m-%d").date()
-                except ValueError:
-                    logger.warning(f"Failed to parse date {v} for key {k}")
         return
